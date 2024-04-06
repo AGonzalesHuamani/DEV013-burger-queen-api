@@ -18,11 +18,13 @@
   },
   "dependencies": {
     "@shelf/jest-mongodb": "^4.1.7",
-    "bcrypt": "^5.0.1",
+    "bcrypt": "^5.1.1",
     "body-parser": "^1.19.0",
-    "express": "^4.17.1",
+    "express": "^4.19.2",
     "jsonwebtoken": "^8.5.1",
-    "mongodb-memory-server": "^8.12.2"
+    "mongodb": "6.5",
+    "mongodb-memory-server": "^8.12.2",
+    "mongoose": "^8.3.0"
   },
   "devDependencies": {
     "docdash": "^1.2.0",
@@ -34,6 +36,7 @@
     "jsdoc": "^3.6.6",
     "jsdoc-http-plugin": "^0.3.2",
     "node-fetch": "^3.1.0",
+    "nodemon": "^3.1.0",
     "tree-kill": "^1.2.2"
   },
   "bootcamp": {
