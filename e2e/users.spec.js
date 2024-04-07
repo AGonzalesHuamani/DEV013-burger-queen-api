@@ -44,7 +44,11 @@ describe('GET /users', () => {
         expect(json[0]).toHaveProperty('_id');
         expect(json[0]).toHaveProperty('email');
       })
+      .finally(() => {
+        console.log("Fin de la prueba 'should get users with pagination'");
+      })
   ));
+
 });
 
 describe('GET /users/:uid', () => {

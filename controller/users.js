@@ -1,6 +1,6 @@
-const { connect } = require("../connect");
-const userSchema = require("../models/user");
+const User = require("../models/user");
 const bcrypt = require("bcrypt");
+const mongoose = require('mongoose');
 
 module.exports = {
   getUsers: async (req, resp, next) => {
@@ -8,11 +8,11 @@ module.exports = {
       const { _page, _limit } = req.query;
       const limit = parseInt(_limit) || 10;
       const page = parseInt(_page) || 1;
-      const offset = (page - 1) * limit;
+      const skip = (page - 1) * limit;
 
-      const users = await userSchema
-        .find({}, "email role")
-        .skip(offset)
+      const users = await User
+        .find({}, "_id email role")
+        .skip(skip)
         .limit(limit);
 
       if (users.length === 0) {
@@ -37,7 +37,7 @@ module.exports = {
       }
 
       // Buscar usuario por ID
-      const user = await userSchema.findById(uid);
+      const user = await User.findById(uid);
 
       // Validar si el usuario existe
       if (!user) {
@@ -46,7 +46,7 @@ module.exports = {
         });
       }
 
-      // Validar si el usuario tiene permisos (asumo que validateOwnerOrAdmin es una función definida en otro lugar)
+      // Verificar permisos
       if (!validateOwnerOrAdmin(req, user._id)) {
         console.log("roles", req.role);
         return resp.status(403).json({
@@ -54,6 +54,7 @@ module.exports = {
         });
       }
 
+      // Devolver la información del usuario
       return resp.status(200).json(user);
     } catch (error) {
       console.error("Error:", error);
@@ -92,7 +93,7 @@ module.exports = {
       }
 
       // Verificar si el correo ya está registrado o no
-      const existingUser = await userSchema.findOne({ email: email });
+      const existingUser = await User.findOne({ email: email });
       if (existingUser) {
         return resp.status(403).json({ msg: "Usuario ya registrado" });
       }
@@ -101,7 +102,7 @@ module.exports = {
       const hashedPassword = await bcrypt.hash(password, 10);
 
       // Crear nuevo usuario con Mongoose
-      const newUser = new userSchema({
+      const newUser = new User({
         email: email,
         password: hashedPassword,
         role: role,
@@ -114,28 +115,126 @@ module.exports = {
       return resp.status(500).send("Error en el servidor");
     }
   },
-  putByUser: (req, resp, next) => {
-    // TODO: Implement the necessary function to fetch the `users` collection or table
+  putByUser: async (req, resp) => {
+    try {
+      const { uid } = req.params;
+      const { email, password, role } = req.body;
+  
+      // Verificación de permisos del usuario actual
+      if (!validateOwnerOrAdmin(req, uid)) {
+        return resp.status(403).json({
+          error: "El usuario no tiene permisos para actualizar",
+        });
+      }
+  
+      // Verificación del ID de usuario proporcionado
+      if (!mongoose.Types.ObjectId.isValid(uid)) {
+        return resp.status(400).json({
+          error: "El ID de usuario proporcionado no es válido",
+        });
+      }
+  
+      // Verificación de si existe un usuario en la BD
+      const existingUser = await User.findById(uid);
+      if (!existingUser) {
+        return resp.status(404).json({
+          msg: "El usuario con el ID proporcionado no existe en la base de datos",
+        });
+      }
+  
+      // Validación de información enviada para modificar
+      if (Object.keys(req.body).length === 0) {
+        return resp
+          .status(400)
+          .json({ error: "No se envió ninguna información para modificar" });
+      }
+  
+      // Hashing de la contraseña si se proporciona
+      let hashedPassword;
+      if (password) {
+        const saltRound = 10;
+        const salt = await bcrypt.genSalt(saltRound);
+        hashedPassword = await bcrypt.hash(password, salt);
+      }
+  
+      // Verificación de cambios en el rol de usuario
+      if (role && role !== existingUser.role && role === "admin" && !isAdmin(req)) {
+        return resp.status(403).json({
+          msg: "El usuario no tiene permisos para cambiar el rol",
+        });
+      }
+  
+      // Actualización del usuario en la base de datos
+      existingUser.email = email || existingUser.email;
+      existingUser.password = hashedPassword || existingUser.password;
+      existingUser.role = role || existingUser.role;
+  
+      await existingUser.save();
+  
+      return resp.json(existingUser);
+    } catch (error) {
+      console.error(error);
+      return resp.status(500).send("Error en el servidor");
+    }
   },
-  deleteByUser: (req, resp, next) => {
-    // TODO: Implement the necessary function to fetch the `users` collection or table
-  },
-};
-const validateOwnerOrAdmin = (req, uid) => {
-  // Verificar si el usuario es administrador
-  if (req.role === "admin") {
-    return true; // Los administradores tienen acceso completo
+  deleteByUser: async (req, resp) => {
+    try {
+      const { uid } = req.params;
+  
+      // Verificar permisos del usuario actual
+      if (!validateOwnerOrAdmin(req, uid)) {
+        return resp.status(403).json({
+          error: "El usuario no tiene permisos para ver esta información",
+        });
+      }
+  
+      // Verificar si el ID de usuario proporcionado es válido
+      if (!mongoose.Types.ObjectId.isValid(uid)) {
+        return resp.status(400).json({
+          error: "El ID de usuario proporcionado no es válido",
+        });
+      }
+  
+      // Buscar el usuario en la base de datos
+      const user = await User.findById(uid);
+      if (!user) {
+        return resp.status(404).json({ error: "El ID del usuario no existe" });
+      }
+  
+      // Eliminar el usuario de la base de datos
+      await user.remove();
+  
+      return resp.status(200).json({ msg: "Usuario eliminado", usuario: user });
+    } catch (error) {
+      console.error(error);
+      return resp.status(500).send("Error en el servidor");
+    }
   }
-
-  // Verificar si el uid coincide con el uid del usuario o su correo electrónico
-  if (req.uid === uid || req.email === uid) {
-    return true; // El usuario es el propietario del recurso
-  }
-  // Si no es administrador y el uid no coincide, denegar el acceso
-  return false;
 };
-
-function isValidEmail(email) {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
-}
+  const validateOwnerOrAdmin = (req, uid) => {
+    if (req.role !== "admin") {
+      if (uid !== req.uid && uid !== req.email) {
+        return false;
+      }
+    }
+    return true;
+  };
+  
+  const getIdOrEmail = (uid) => {
+    let filter;
+    const regexCorreo = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const validateId = ObjectId.isValid(uid);
+    if (regexCorreo.test(uid)) {
+      filter = { email: uid };
+    } else {
+      if (validateId) {
+        filter = { _id: new ObjectId(uid) };
+      }
+    }
+    return filter;
+  };
+  
+  function isValidEmail(email) {
+    const regexCorreo = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return regexCorreo.test(email);
+  }

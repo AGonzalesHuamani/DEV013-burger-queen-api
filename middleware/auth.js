@@ -17,6 +17,7 @@ module.exports = (secret) => (req, resp, next) => {
     return next();
   }
 
+  // vamos a verificar si el token JWT proporcionado es válido y está firmado correctamente.
   jwt.verify(token, secret, (err, decodedToken) => {
     console.log("🚀 ~ jwt.verify ~ decodedToken:", decodedToken)
     if (err) {

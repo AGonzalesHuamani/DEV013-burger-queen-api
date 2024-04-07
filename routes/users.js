@@ -1,8 +1,8 @@
 const bcrypt = require('bcrypt');
-const { connect } = require("../connect");
+// const { connect } = require("../connect");
 const { requireAuth, requireAdmin } = require("../middleware/auth");
 const { postUser, getUsers, getUserById , putByUser , deleteByUser} = require("../controller/users");
-const userSchema = require("../models/user");
+const User = require("../models/user");
 
 const initAdminUser = async (app, next) => {
   const { adminEmail, adminPassword } = app.get('config');
@@ -17,7 +17,7 @@ const initAdminUser = async (app, next) => {
 
   try {
     // Buscar si ya existe un usuario administrador
-    const existingAdmin = await userSchema.findOne({ email: adminEmail });
+    const existingAdmin = await User.findOne({ email: adminEmail });
     
     if (!existingAdmin) {
       // Si no existe, crear uno

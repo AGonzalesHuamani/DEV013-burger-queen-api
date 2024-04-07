@@ -17,24 +17,35 @@ module.exports = (app, nextMain) => {
       // coincide con un usuario en la base de datos
       // Si coinciden, envía un token de acceso creado con JWT
       const { email, password } = req.body;
+      console.log("password del req.body", password);
+      if (!email || !password) {
+        return resp.status(400).json({ error: "Introduzca una contraseña y un correo electrónico" });
+      }
+
       const db = await connect();
       const collection = db.collection("users");
       const user = await collection.findOne({ email });
       //Compara la contraseña proporcionada en la solicitud 
       //con la contraseña almacenada en la base de datos 
-      const compare = await bcrypt.compare(password, user.password);
-      if (!email && !password) {
-        resp.status(400).json({ error: "Enter a password and email" });
+      console.log("user pruebas e2e", user);
+      console.log("user/password pruebas e2e", user.password);
+      
+      if (!user) {
+        return resp.status(400).json({ error: "Correo electrónico o contraseña no válidos" });
       }
+
+      const compare = await bcrypt.compare(password, user.password);
+
       if (compare) {
         const { _id, role } = user;
         const accesToken = jwt.sign({ _id: _id, role: role }, secret);
         resp.json({ ok: "Ingreso", token: accesToken });
+      }else {
+        return resp.status(400).json({ error: "Invalid email or password" });
       }
-      // next(400);
+      
     } catch (error) {
       console.error("Error", error);
-      // next(500);
     }
   });
 
