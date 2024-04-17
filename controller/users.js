@@ -173,7 +173,7 @@ module.exports = {
       }
   
       //verificacion de cambio de rol
-      if (role !== existingUser.role){
+      if (role && role !== existingUser.role){
         // console.log("🚀 ~ putByUser: ~ existingUser.role:", existingUser.role)
         // console.log("🚀 ~ putByUser: ~ role:", role)
         if(req.role !== "admin"){
