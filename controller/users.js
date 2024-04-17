@@ -129,7 +129,14 @@ module.exports = {
       const { email, password, role } = req.body;
       const isEmail = isValidEmail(uid);
       console.log("🚀 ~ putByUser: ~ isEmail:", isEmail)
-      
+       // evaluar mas a fondo!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      // Validar el formato del object id
+      // if(!mongoose.Types.ObjectId.isValid(uid)){
+      //   return resp.status(404).json({
+      //     msg: "El Id proporcionado no es valido"
+      //   })
+      // }
+
       const filter = isEmail ? { email: uid } : { _id: uid };
       console.log("🚀 ~ putByUser: ~ filter:", filter)
       
@@ -140,7 +147,9 @@ module.exports = {
           error: "El usuario no tiene permisos para ver esta información",
         });
       }
-
+      
+     
+      
 
       // Validar si el usuario existe en la base de datos
       const existingUser = await User.findOne(filter)
@@ -150,53 +159,51 @@ module.exports = {
         })
       }
      
-      // Validar el formato del object id
-      if(!mongoose.Types.ObjectId.isValid(uid)){
-        return resp.status(404).json({
-          msg: "El Id proporcionado no es valido"
-        })
-      }
-      
-
-      //Validación de información enviada para modificar
       if (Object.keys(req.body).length === 0) {
         return resp
           .status(400)
-          .json({ error: "No se envió ninguna información para modificar" });
+          .json({ error: "No se envio ninguna información para modificar" });
       }
 
       // Hashing de la contraseña si se proporciona
-      // let hashedPassword;
-      // if (password) {
-      //   const saltRound = 10;
-      //   const salt = await bcrypt.genSalt(saltRound);
-      //   hashedPassword = await bcrypt.hash(password, salt);
-      // }
+      let hashedPassword;
+      if (password) {
+        const saltRound = 10;
+        const salt = await bcrypt.genSalt(saltRound);
+        hashedPassword = await bcrypt.hash(password, salt);
+      }
   
-      // console.log("🚀 ~ putByUser: ~ existingUser.role:", existingUser.role);
-      // console.log("🚀 ~ putByUser: ~ role:", role);
-      // console.log("isadmin", isAdmin(req));
+      //verificacion de cambio de rol
+      if (role !== existingUser.role){
+        console.log("🚀 ~ putByUser: ~ existingUser.role:", existingUser.role)
+        console.log("🚀 ~ putByUser: ~ role:", role)
+        if(req.role !== "admin"){
+          return resp.status(403).json({
+            msg: "Usuario no tiene permisos para hacer cambios"
+          })
+        }
+        
+      }
 
       //Actualización del documento en la base de datos utilizando Mongoose
       const updatedUser = await User.updateOne(
         filter,
         {$set:{
           email: email,
-          password: password, 
+          password: hashedPassword, 
           role: role 
         }
           
         },
       );
-      console.log("updatedUser*****", updatedUser);
-
-      // // Verificación de cambios realizados
-      // // if (!updatedUser) {
-      // //   return resp.status(400).json({ error: "No se realizó ningún cambio" });
-      // // }
+      
+      // Verificación de cambios realizados
+      if (updatedUser.modifiedCount ===0) {
+        return resp.status(400).json({ error: "No se realizó ningún cambio" });
+      }
 
       // // Envío de la información actualizada
-      return resp.status(200).json({ message: "Usuario actualizado correctamente"});
+      return resp.status(200).json({ message: "Usuario actualizado correctamente", update: updatedUser});
       // return user
     } catch (error) {
       return resp.status(500).send("Error en el servidor");

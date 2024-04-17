@@ -27,7 +27,7 @@ describe('POST /login', () => {
   it('fail with 404 credentials dont match', () => (
     fetch('/login', {
       method: 'POST',
-      body: { email: `test@bar.baz`, password: '1234' },
+      body: { email: `test@bar.baz`, password: '123456' },
     })
       .then((resp) => expect(resp.status).toBe(404))
   ));
