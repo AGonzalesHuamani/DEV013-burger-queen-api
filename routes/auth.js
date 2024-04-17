@@ -28,7 +28,6 @@ module.exports = (app, nextMain) => {
       //Compara la contraseña proporcionada en la solicitud 
       //con la contraseña almacenada en la base de datos 
       console.log("user pruebas e2e", user);
-      console.log("user/password pruebas e2e", user.password);
       
       if (!user) {
         return resp.status(400).json({ error: "Correo electrónico o contraseña no válidos" });
@@ -38,7 +37,7 @@ module.exports = (app, nextMain) => {
 
       if (compare) {
         const { _id, role } = user;
-        const accesToken = jwt.sign({ _id: _id, role: role }, secret);
+        const accesToken = jwt.sign({ _id: _id, role: role, email:email }, secret);
         resp.json({ ok: "Ingreso", token: accesToken });
       }else {
         return resp.status(400).json({ error: "Invalid email or password" });

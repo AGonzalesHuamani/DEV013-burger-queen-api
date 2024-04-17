@@ -1,6 +1,6 @@
 const User = require("../models/user");
 const bcrypt = require("bcrypt");
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
 module.exports = {
   getUsers: async (req, resp, next) => {
@@ -10,8 +10,7 @@ module.exports = {
       const page = parseInt(_page) || 1;
       const skip = (page - 1) * limit;
 
-      const users = await User
-        .find({}, "_id email role")
+      const users = await User.find({}, "_id email role")
         .skip(skip)
         .limit(limit);
 
@@ -29,15 +28,16 @@ module.exports = {
   // TODO: Implement the necessary function to fetch the `users` collection or table
   getUserById: async (req, resp) => {
     try {
+      // extraemos el id de los parametros de req
       const { uid } = req.params;
+      let user;
+      const isEmail = isValidEmail(uid);
 
-      // Validación de identificador válido
-      if (!mongoose.isValidObjectId(uid)) {
-        return resp.status(400).json({ error: "Identificador inválido" });
+      if (isEmail) {
+        user = await User.findOne({ email: uid });
+      } else {
+        user = await User.findById(uid);
       }
-
-      // Buscar usuario por ID
-      const user = await User.findById(uid);
 
       // Validar si el usuario existe
       if (!user) {
@@ -45,15 +45,15 @@ module.exports = {
           msg: "Usuario no encontrado, por favor intente de nuevo con un usuario válido.",
         });
       }
-
       // Verificar permisos
-      if (!validateOwnerOrAdmin(req, user._id)) {
-        console.log("roles", req.role);
+      if (!validateOwnerOrAdmin(req, String(user._id))) {
+        // console.log("dentro de getUserById: - que devuelve validateOwnerOrAdmin user._id", validateOwnerOrAdmin(req, user._id));
+        // console.log("dentro de getUserById: - que devuelve validateOwnerOrAdmin user", validateOwnerOrAdmin(req, user));
+        // console.log("dentro de getUserById: roles", req.role);
         return resp.status(403).json({
           error: "El usuario no tiene permisos para ver esta información",
         });
       }
-
       // Devolver la información del usuario
       return resp.status(200).json(user);
     } catch (error) {
@@ -78,6 +78,8 @@ module.exports = {
         return resp.status(400).json({ error: "El rol no es válido" });
       }
 
+      console.log("Email Post User", email);
+
       // Validación del formato de correo electrónico
       if (!isValidEmail(email)) {
         return resp
@@ -92,24 +94,30 @@ module.exports = {
           .json({ error: "La contraseña debe tener al menos 6 caracteres" });
       }
 
-      // Verificar si el correo ya está registrado o no
-      const existingUser = await User.findOne({ email: email });
-      if (existingUser) {
-        return resp.status(403).json({ msg: "Usuario ya registrado" });
-      }
-
       // Generación de hash de la contraseña
       const hashedPassword = await bcrypt.hash(password, 10);
+      console.log("🚀 ~ app.post ~ hashedPassword:", hashedPassword);
 
-      // Crear nuevo usuario con Mongoose
-      const newUser = new User({
-        email: email,
-        password: hashedPassword,
-        role: role,
-      });
-      await newUser.save();
-
-      return resp.status(200).json(newUser);
+      // Verificar si el correo de un usuario ya está registrado o no
+      const existingUser = await User.findOne({ email: email });
+      console.log("Existing User", existingUser);
+      if (!existingUser) {
+        // Crear nuevo usuario con Mongoose
+        const newUser = new User({
+          email: email,
+          password: hashedPassword,
+          role: role,
+        });
+        await newUser.save();
+        console.log("NewUser creado exitosamente.");
+        return resp.status(200).json({
+          email,
+          role,
+          _id: newUser._id,
+        });
+      } else {
+        return resp.status(403).json({ msg: "Usuario ya registrado" });
+      }
     } catch (error) {
       console.log("Error:", error);
       return resp.status(500).send("Error en el servidor");
@@ -119,122 +127,146 @@ module.exports = {
     try {
       const { uid } = req.params;
       const { email, password, role } = req.body;
-  
-      // Verificación de permisos del usuario actual
-      if (!validateOwnerOrAdmin(req, uid)) {
-        return resp.status(403).json({
-          error: "El usuario no tiene permisos para actualizar",
-        });
-      }
-  
-      // Verificación del ID de usuario proporcionado
-      if (!mongoose.Types.ObjectId.isValid(uid)) {
-        return resp.status(400).json({
-          error: "El ID de usuario proporcionado no es válido",
-        });
-      }
-  
-      // Verificación de si existe un usuario en la BD
-      const existingUser = await User.findById(uid);
-      if (!existingUser) {
+      // let user;
+      const isEmail = isValidEmail(uid);
+      console.log("🚀 ~ putByUser: ~ isEmail:", isEmail)
+      
+      const filter = isEmail ? { email: uid } : { _id: uid };
+      console.log("🚀 ~ putByUser: ~ filter:", filter)
+      // console.log("is Email*******", isEmail);
+
+      // console.log("user *********", user);
+      // Validar si el usuario existe
+      if(!mongoose.Types.ObjectId.isValid(uid)){
         return resp.status(404).json({
-          msg: "El usuario con el ID proporcionado no existe en la base de datos",
-        });
+          msg: "El Id proporcionado no es valido"
+        })
       }
-  
+
+
+      // Validar si el usuario existe
+      const existingUser = await User.findOne(filter)
+      if(!existingUser){
+        return resp.status(404).json({
+          msg: "Usuario no encontrado, por favor intente de nuevo con un usuario válido"
+        })
+      }
+      // if (!user) {
+      //   return resp.status(400).json({
+      //     msg: "Usuario no encontrado, por favor intente de nuevo con un usuario válido.",
+      //   });
+      // }
+
+
+      // Verificar permisos
+      // if (!validateOwnerOrAdmin(req, uid)) {
+      //   console.log("🚀 ~ putByUser: ~ req:", req)
+      //   return resp.status(403).json({
+      //     error: "El usuario no tiene permisos para ver esta información",
+      //   });
+      // }
+
       // Validación de información enviada para modificar
-      if (Object.keys(req.body).length === 0) {
-        return resp
-          .status(400)
-          .json({ error: "No se envió ninguna información para modificar" });
-      }
-  
+      // if (Object.keys(req.body).length === 0) {
+      //   return resp
+      //     .status(400)
+      //     .json({ error: "No se envió ninguna información para modificar" });
+      // }
+
       // Hashing de la contraseña si se proporciona
-      let hashedPassword;
-      if (password) {
-        const saltRound = 10;
-        const salt = await bcrypt.genSalt(saltRound);
-        hashedPassword = await bcrypt.hash(password, salt);
-      }
+      // let hashedPassword;
+      // if (password) {
+      //   const saltRound = 10;
+      //   const salt = await bcrypt.genSalt(saltRound);
+      //   hashedPassword = await bcrypt.hash(password, salt);
+      // }
   
-      // Verificación de cambios en el rol de usuario
-      if (role && role !== existingUser.role && role === "admin" && !isAdmin(req)) {
-        return resp.status(403).json({
-          msg: "El usuario no tiene permisos para cambiar el rol",
-        });
-      }
-  
-      // Actualización del usuario en la base de datos
-      existingUser.email = email || existingUser.email;
-      existingUser.password = hashedPassword || existingUser.password;
-      existingUser.role = role || existingUser.role;
-  
-      await existingUser.save();
-  
-      return resp.json(existingUser);
+      // console.log("🚀 ~ putByUser: ~ existingUser.role:", existingUser.role);
+      // console.log("🚀 ~ putByUser: ~ role:", role);
+      // console.log("isadmin", isAdmin(req));
+
+      //Actualización del documento en la base de datos utilizando Mongoose
+      const updatedUser = await User.updateOne(
+        filter,
+        {$set:{
+          email: email,
+          password: password, 
+          role: role 
+        }
+          
+        },
+      );
+      console.log("updatedUser*****", updatedUser);
+
+      // // Verificación de cambios realizados
+      // // if (!updatedUser) {
+      // //   return resp.status(400).json({ error: "No se realizó ningún cambio" });
+      // // }
+
+      // // Envío de la información actualizada
+      return resp.status(200).json({ message: "Usuario actualizado correctamente"});
+      // return user
     } catch (error) {
-      console.error(error);
       return resp.status(500).send("Error en el servidor");
     }
   },
   deleteByUser: async (req, resp) => {
     try {
+      // extraemos el id de los parametros de req
       const { uid } = req.params;
-  
+      let user;
+      const isEmail = isValidEmail(uid);
+
+      if (isEmail) {
+        user = await User.findOne({ email: uid });
+      } else {
+        user = await User.findById(uid);
+      }
+
       // Verificar permisos del usuario actual
       if (!validateOwnerOrAdmin(req, uid)) {
         return resp.status(403).json({
           error: "El usuario no tiene permisos para ver esta información",
         });
       }
-  
-      // Verificar si el ID de usuario proporcionado es válido
-      if (!mongoose.Types.ObjectId.isValid(uid)) {
-        return resp.status(400).json({
-          error: "El ID de usuario proporcionado no es válido",
+      // Validar si el usuario existe
+      if (!user) {
+        return resp.status(404).json({
+          msg: "Usuario no encontrado, por favor intente de nuevo con un usuario válido.",
         });
       }
-  
-      // Buscar el usuario en la base de datos
-      const user = await User.findById(uid);
-      if (!user) {
-        return resp.status(404).json({ error: "El ID del usuario no existe" });
-      }
-  
       // Eliminar el usuario de la base de datos
-      await user.remove();
-  
+      const result = await user.deleteOne(user);
+
       return resp.status(200).json({ msg: "Usuario eliminado", usuario: user });
     } catch (error) {
       console.error(error);
       return resp.status(500).send("Error en el servidor");
     }
-  }
+  },
 };
-  const validateOwnerOrAdmin = (req, uid) => {
-    if (req.role !== "admin") {
-      if (uid !== req.uid && uid !== req.email) {
-        return false;
-      }
-    }
-    return true;
-  };
-  
-  const getIdOrEmail = (uid) => {
-    let filter;
-    const regexCorreo = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const validateId = ObjectId.isValid(uid);
-    if (regexCorreo.test(uid)) {
-      filter = { email: uid };
+const validateOwnerOrAdmin = (req, uid) => {
+  // if (req) {
+  //   console.log("validateOwnerOrAdmin -Contenido de req:", uid);
+  //   console.log("validate *role*****", req.role);
+  //   console.log("validate *uid*****", req.uid);
+  //   console.log("validate *email*****", req.email);
+  // }
+
+  if (req && req.role && req.role !== "admin") {
+    console.log("🚀 ~ validateOwnerOrAdmin ~ req.role:", req.role)
+    // console.log("validateOwnerOrAdmin -Contenido de req:", req.role);
+    if (uid !== req.uid && uid !== req.email) {
+      return false;
     } else {
-      if (validateId) {
-        filter = { _id: new ObjectId(uid) };
-      }
+      return true;
     }
-    return filter;
-  };
-  
-  function isValidEmail(email) {
-    const regexCorreo = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return regexCorreo.test(email);
   }
+  return true;
+};
+console.log("que devuelve validateOwnerOrAdmin", validateOwnerOrAdmin());
+
+function isValidEmail(email) {
+  const regexCorreo = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return regexCorreo.test(email);
+}

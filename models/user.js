@@ -4,6 +4,7 @@ const userSchema = mongoose.Schema({
     // nop considere en el esquema el _id
     // porque Mongodb automáticamente lo agrega 
     //para cada documento en una colección
+   
     email : {
         type : String,
         required: true

@@ -13,8 +13,13 @@ app.set('config', config);
 app.set('pkg', pkg);
 
 // parse application/x-www-form-urlencoded
+// analizar los datos de formulario codificados 
+//en la URL y convertir en un objeto JavaScript
 app.use(express.urlencoded({ extended: false }));
+// middleware para parsear el body de las request
 app.use(express.json());
+//middleware de autenticación en la aplicación Express
+// importado desde el archivo de auth.js 
 app.use(authMiddleware(secret));
 
 //llamar a la funcion para conectar con la base de datos 
@@ -25,7 +30,7 @@ routes(app, (err) => {
   if (err) {
     throw err;
   }
-
+  //middleware de manejo de errores
   app.use(errorHandler);
 
   app.listen(port, () => {

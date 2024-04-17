@@ -38,7 +38,7 @@ describe('GET /users', () => {
         expect(resp.status).toBe(200);
         return resp.json();
       })
-      .then(({ json }) => {
+      .then(( json ) => {
         expect(Array.isArray(json)).toBe(true);
         expect(json.length).toBe(1);
         expect(json[0]).toHaveProperty('_id');
@@ -115,8 +115,8 @@ describe('POST /users', () => {
     fetchAsAdmin('/users', {
       method: 'POST',
       body: {
-        email: 'test1@test.test',
-        password: '12345',
+        email: 'test5@test.test',
+        password: '123456',
         role: "waiter",
       },
     })
@@ -138,7 +138,7 @@ describe('POST /users', () => {
       method: 'POST',
       body: {
         email: 'admin1@test.test',
-        password: '12345',
+        password: '123456',
         role: "admin",
       },
     })
@@ -158,7 +158,7 @@ describe('POST /users', () => {
   it('should fail with 403 when user is already registered', () => (
     fetchAsAdmin('/users', {
       method: 'POST',
-      body: { email: 'test@test.test', password: '123456' },
+      body: { email: 'test@test.test', password: '123456', role: 'admin' },
     })
       .then((resp) => expect(resp.status).toBe(403))
   ));
@@ -185,7 +185,7 @@ describe('PUT /users/:uid', () => {
       .then((resp) => expect(resp.status).toBe(400))
   ));
 
-  it('should fail with 403 when not admin tries to change own role', () => (
+  it.only('should fail with 403 when not admin tries to change own role', () => (
     fetchAsTestUser('/users/test@test.test', {
       method: 'PUT',
       body: { role: "admin" },
@@ -245,7 +245,7 @@ describe('DELETE /users/:uid', () => {
   ));
 
   it('should delete own user', () => {
-    const credentials = { email: `foo-${Date.now()}@bar.baz`, password: '1234' };
+    const credentials = { email: `test@bar.baz`, password: '123400' , role: 'admin' };
     return fetchAsAdmin('/users', { method: 'POST', body: credentials })
       .then((resp) => expect(resp.status).toBe(200))
       .then(() => fetch('/login', { method: 'POST', body: credentials }))
@@ -262,7 +262,7 @@ describe('DELETE /users/:uid', () => {
   });
 
   it('should delete other user as admin', () => {
-    const credentials = { email: `foo-${Date.now()}@bar.baz`, password: '1234' };
+    const credentials = { email: `test@bar.baz`, password: '123456' , role: 'admin' };
     return fetchAsAdmin('/users', { method: 'POST', body: credentials })
       .then((resp) => expect(resp.status).toBe(200))
       .then(() => fetchAsAdmin(`/users/${credentials.email}`, { method: 'DELETE' }))

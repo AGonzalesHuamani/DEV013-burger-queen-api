@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 module.exports = (secret) => (req, resp, next) => {
   const { authorization } = req.headers;
 
+  //si no hay token continua
   if (!authorization) {
     return next();
   }
@@ -19,7 +20,7 @@ module.exports = (secret) => (req, resp, next) => {
 
   // vamos a verificar si el token JWT proporcionado es válido y está firmado correctamente.
   jwt.verify(token, secret, (err, decodedToken) => {
-    console.log("🚀 ~ jwt.verify ~ decodedToken:", decodedToken)
+    // console.log("🚀 ~ jwt.verify ~ decodedToken:", decodedToken)
     if (err) {
       return next(403);
     }
@@ -28,12 +29,12 @@ module.exports = (secret) => (req, resp, next) => {
     //req es un bojeto recuerda!!!!!!
     //ID único del usuario
     req.uid = decodedToken._id;
-    console.log("🚀 ~ jwt.verify ~ req.uid:", req.uid)
+    // console.log("🚀 ~ jwt.verify ~ req.uid:", req.uid)
     // rol del usuario
     req.role = decodedToken.role;
-    console.log("🚀 ~ jwt.verify ~ req.role:", req.role)
+    // console.log("🚀 ~ jwt.verify ~ req.role:", req.role)
     // correo del usuario
-    req.email = decodedToken.email
+     req.email = decodedToken.email
     //pasar el control al siguiente middleware
     // ya terminamos de manejar la verificación del token JWT 
     //podemos proceder con el siguiente paso en el flujo de la solicitud.
