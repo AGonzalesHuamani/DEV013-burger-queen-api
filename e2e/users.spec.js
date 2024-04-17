@@ -185,7 +185,7 @@ describe('PUT /users/:uid', () => {
       .then((resp) => expect(resp.status).toBe(400))
   ));
 
-  it.only('should fail with 403 when not admin tries to change own role', () => (
+  it('should fail with 403 when not admin tries to change own role', () => (
     fetchAsTestUser('/users/test@test.test', {
       method: 'PUT',
       body: { role: "admin" },

@@ -127,51 +127,43 @@ module.exports = {
     try {
       const { uid } = req.params;
       const { email, password, role } = req.body;
-      // let user;
       const isEmail = isValidEmail(uid);
       console.log("🚀 ~ putByUser: ~ isEmail:", isEmail)
       
       const filter = isEmail ? { email: uid } : { _id: uid };
       console.log("🚀 ~ putByUser: ~ filter:", filter)
-      // console.log("is Email*******", isEmail);
+      
+      // Verificar permisos
+      if (!validateOwnerOrAdmin(req, uid)) {
+        console.log("🚀 ~ putByUser: ~ req:", req)
+        return resp.status(403).json({
+          error: "El usuario no tiene permisos para ver esta información",
+        });
+      }
 
-      // console.log("user *********", user);
-      // Validar si el usuario existe
+
+      // Validar si el usuario existe en la base de datos
+      const existingUser = await User.findOne(filter)
+      if(!existingUser){
+        return resp.status(404).json({
+          msg: "Usuario no encontrado en la base de datos"
+        })
+      }
+     
+      // Validar el formato del object id
       if(!mongoose.Types.ObjectId.isValid(uid)){
         return resp.status(404).json({
           msg: "El Id proporcionado no es valido"
         })
       }
+      
 
-
-      // Validar si el usuario existe
-      const existingUser = await User.findOne(filter)
-      if(!existingUser){
-        return resp.status(404).json({
-          msg: "Usuario no encontrado, por favor intente de nuevo con un usuario válido"
-        })
+      //Validación de información enviada para modificar
+      if (Object.keys(req.body).length === 0) {
+        return resp
+          .status(400)
+          .json({ error: "No se envió ninguna información para modificar" });
       }
-      // if (!user) {
-      //   return resp.status(400).json({
-      //     msg: "Usuario no encontrado, por favor intente de nuevo con un usuario válido.",
-      //   });
-      // }
-
-
-      // Verificar permisos
-      // if (!validateOwnerOrAdmin(req, uid)) {
-      //   console.log("🚀 ~ putByUser: ~ req:", req)
-      //   return resp.status(403).json({
-      //     error: "El usuario no tiene permisos para ver esta información",
-      //   });
-      // }
-
-      // Validación de información enviada para modificar
-      // if (Object.keys(req.body).length === 0) {
-      //   return resp
-      //     .status(400)
-      //     .json({ error: "No se envió ninguna información para modificar" });
-      // }
 
       // Hashing de la contraseña si se proporciona
       // let hashedPassword;
