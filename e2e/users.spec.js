@@ -116,7 +116,7 @@ describe('POST /users', () => {
       method: 'POST',
       body: {
         email: 'test5@test.test',
-        password: '123456',
+        password: '1234567',
         role: "waiter",
       },
     })
@@ -138,7 +138,7 @@ describe('POST /users', () => {
       method: 'POST',
       body: {
         email: 'admin1@test.test',
-        password: '123456',
+        password: '1234567',
         role: "admin",
       },
     })

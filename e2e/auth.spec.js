@@ -38,12 +38,16 @@ describe('POST /login', () => {
       body: { email: config.adminEmail, password: config.adminPassword },
     })
       .then((resp) => {
+        
         expect(resp.status).toBe(200);
+        console.log("🚀 ~ .then ~ resp1 *****************************:", resp)
         return resp.json();
       })
-      .then(({ accessToken }) => fetchWithAuth(accessToken)(`/users/${config.adminEmail}`))
+      .then(({ token }) => fetchWithAuth(token)(`/users/${config.adminEmail}`))
       .then((resp) => {
+        console.log("🚀 ~ .then ~ resp ******:", resp)
         expect(resp.status).toBe(200);
+        
         return resp.json();
       })
       .then((json) => expect(json.email).toBe(config.adminEmail))

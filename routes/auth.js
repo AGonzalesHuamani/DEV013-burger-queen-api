@@ -30,17 +30,17 @@ module.exports = (app, nextMain) => {
       console.log("user pruebas e2e", user);
       
       if (!user) {
-        return resp.status(400).json({ error: "Correo electrónico o contraseña no válidos" });
+        return resp.status(404).json({ error: "Correo electrónico o contraseña no válidos" });
       }
 
       const compare = await bcrypt.compare(password, user.password);
 
       if (compare) {
         const { _id, role } = user;
-        const accesToken = jwt.sign({ _id: _id, role: role, email:email }, secret);
-        resp.json({ ok: "Ingreso", token: accesToken });
+        const token = jwt.sign({ _id: _id, role: role, email:email, }, secret);
+        resp.status(200).json({ ok: "Ingreso", token: token });
       }else {
-        return resp.status(400).json({ error: "Invalid email or password" });
+        return resp.status(404).json({ error: "Correo electrónico o contraseña no válidos" });
       }
       
     } catch (error) {

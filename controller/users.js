@@ -38,15 +38,8 @@ module.exports = {
       } else {
         user = await User.findById(uid);
       }
-
-      // Validar si el usuario existe
-      if (!user) {
-        return resp.status(404).json({
-          msg: "Usuario no encontrado, por favor intente de nuevo con un usuario válido.",
-        });
-      }
-      // Verificar permisos
-      if (!validateOwnerOrAdmin(req, String(user._id))) {
+       // Verificar permisos
+       if (!validateOwnerOrAdmin(req, uid)) {
         // console.log("dentro de getUserById: - que devuelve validateOwnerOrAdmin user._id", validateOwnerOrAdmin(req, user._id));
         // console.log("dentro de getUserById: - que devuelve validateOwnerOrAdmin user", validateOwnerOrAdmin(req, user));
         // console.log("dentro de getUserById: roles", req.role);
@@ -54,6 +47,13 @@ module.exports = {
           error: "El usuario no tiene permisos para ver esta información",
         });
       }
+      // Validar si el usuario existe
+      if (!user) {
+        return resp.status(404).json({
+          msg: "Usuario no encontrado, por favor intente de nuevo con un usuario válido.",
+        });
+      }
+     
       // Devolver la información del usuario
       return resp.status(200).json(user);
     } catch (error) {
@@ -128,7 +128,7 @@ module.exports = {
       const { uid } = req.params;
       const { email, password, role } = req.body;
       const isEmail = isValidEmail(uid);
-      console.log("🚀 ~ putByUser: ~ isEmail:", isEmail)
+      // console.log("🚀 ~ putByUser: ~ isEmail:", isEmail)
        // evaluar mas a fondo!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       // Validar el formato del object id
       // if(!mongoose.Types.ObjectId.isValid(uid)){
@@ -138,18 +138,17 @@ module.exports = {
       // }
 
       const filter = isEmail ? { email: uid } : { _id: uid };
-      console.log("🚀 ~ putByUser: ~ filter:", filter)
+      // console.log("🚀 ~ putByUser: ~ filter:", filter)
       
       // Verificar permisos
       if (!validateOwnerOrAdmin(req, uid)) {
+        console.log("🚀 ~ putByUser***************************************************: ~ uid:", uid)
         console.log("🚀 ~ putByUser: ~ req:", req)
         return resp.status(403).json({
           error: "El usuario no tiene permisos para ver esta información",
         });
       }
-      
-     
-      
+         
 
       // Validar si el usuario existe en la base de datos
       const existingUser = await User.findOne(filter)
@@ -175,8 +174,8 @@ module.exports = {
   
       //verificacion de cambio de rol
       if (role !== existingUser.role){
-        console.log("🚀 ~ putByUser: ~ existingUser.role:", existingUser.role)
-        console.log("🚀 ~ putByUser: ~ role:", role)
+        // console.log("🚀 ~ putByUser: ~ existingUser.role:", existingUser.role)
+        // console.log("🚀 ~ putByUser: ~ role:", role)
         if(req.role !== "admin"){
           return resp.status(403).json({
             msg: "Usuario no tiene permisos para hacer cambios"
@@ -245,16 +244,8 @@ module.exports = {
   },
 };
 const validateOwnerOrAdmin = (req, uid) => {
-  // if (req) {
-  //   console.log("validateOwnerOrAdmin -Contenido de req:", uid);
-  //   console.log("validate *role*****", req.role);
-  //   console.log("validate *uid*****", req.uid);
-  //   console.log("validate *email*****", req.email);
-  // }
-
   if (req && req.role && req.role !== "admin") {
     console.log("🚀 ~ validateOwnerOrAdmin ~ req.role:", req.role)
-    // console.log("validateOwnerOrAdmin -Contenido de req:", req.role);
     if (uid !== req.uid && uid !== req.email) {
       return false;
     } else {
