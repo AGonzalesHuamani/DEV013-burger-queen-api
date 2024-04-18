@@ -27,7 +27,7 @@ describe('POST /login', () => {
   it('fail with 404 credentials dont match', () => (
     fetch('/login', {
       method: 'POST',
-      body: { email: `foo-${Date.now()}@bar.baz`, password: 'xxxx' },
+      body: { email: `test@bar.baz`, password: '123456' },
     })
       .then((resp) => expect(resp.status).toBe(404))
   ));
@@ -38,12 +38,16 @@ describe('POST /login', () => {
       body: { email: config.adminEmail, password: config.adminPassword },
     })
       .then((resp) => {
+        
         expect(resp.status).toBe(200);
+        console.log("🚀 ~ .then ~ resp1 *****************************:", resp)
         return resp.json();
       })
-      .then(({ accessToken }) => fetchWithAuth(accessToken)(`/users/${config.adminEmail}`))
+      .then(({ token }) => fetchWithAuth(token)(`/users/${config.adminEmail}`))
       .then((resp) => {
+        console.log("🚀 ~ .then ~ resp ******:", resp)
         expect(resp.status).toBe(200);
+        
         return resp.json();
       })
       .then((json) => expect(json.email).toBe(config.adminEmail))
